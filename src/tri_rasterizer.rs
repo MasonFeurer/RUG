@@ -1,5 +1,4 @@
-use crate::graphics::colors::Color;
-use crate::graphics::Graphics;
+use crate::graphics::{Color, Graphics};
 use crate::vectors::Vec2;
 
 // note: this rasterizer expects (0, 0) to be the top-left

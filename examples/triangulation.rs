@@ -2,19 +2,6 @@ use rug::fonts::build_text;
 use rug::triangulation::triangulate;
 use rug::*;
 
-fn main() {
-    #[cfg(target_os = "macos")]
-    let size = Vec2::new(1200, 1200);
-    #[cfg(target_os = "windows")]
-    let size = Vec2::new(600, 600);
-
-    let config = CanvasConfig::new()
-        .with_title("Poly Triangulation")
-        .with_size(size);
-
-    run_canvas_app(App::new(), config)
-}
-
 pub struct App {
     polys: Vec<Poly>,
     tris: Vec<Tri>,
@@ -49,6 +36,17 @@ impl CanvasApp for App {
             g.draw_tri(tri, Color::GREEN);
         }
     }
+}
 
-    fn input_event(&mut self, _event: InputEvent, _window: &mut Window) {}
+fn main() {
+    #[cfg(target_os = "macos")]
+    let size = Vec2::new(1200, 1200);
+    #[cfg(target_os = "windows")]
+    let size = Vec2::new(600, 600);
+
+    let config = CanvasConfig::new()
+        .with_title("Poly Triangulation")
+        .with_size(size);
+
+    run_canvas_app(App::new(), config)
 }

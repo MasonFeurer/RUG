@@ -1,5 +1,4 @@
-use crate::graphics::colors::Color;
-use crate::graphics::Graphics;
+use crate::graphics::{Color, Graphics};
 use crate::shapes::Rect;
 use crate::vectors::Vec2;
 
@@ -45,13 +44,22 @@ impl<'a> PixBufMutView<'a> {
         self.set_pixel_by_index(calc_index!(pos, self.size.x), color);
     }
 
-    /// Sets a pixel in the buffer, specified by an index, to an RGBA value represented by `int`.
+    /// Sets a pixel in the buffer, specified by an index, to a color.
     ///
     /// **UNSAFE** - Given an invalid index, this function will cause undefined behavior.
     #[inline(always)]
     pub unsafe fn set_pixel_by_index(&mut self, index: usize, color: Color) {
-        let ptr_4_bytes = &mut self.bytes[index] as *mut u8 as *mut u32;
-        *ptr_4_bytes = color.0;
+        let ptr: *mut u32 = std::mem::transmute(self.bytes.get_unchecked_mut(index));
+        *ptr = color.to_u32();
+    }
+
+    /// Sets a pixel in the buffer, specified by an index, to a color.
+    ///
+    /// **UNSAFE** - Given an invalid index, this function will cause undefined behavior.
+    #[inline(always)]
+    pub unsafe fn set_4pixels_by_index(&mut self, index: usize, color: u128) {
+        let ptr: *mut u128 = std::mem::transmute(self.bytes.get_unchecked_mut(index));
+        *ptr = color;
     }
 
     /// Returns the color of the pixel at the given position.
@@ -61,7 +69,7 @@ impl<'a> PixBufMutView<'a> {
             return None;
         }
         // SAFETY: TODO
-        unsafe { Some(self.get_pixel_unchecked(pos)) }
+        Some(unsafe { self.get_pixel_unchecked(pos) })
     }
 
     /// Returns the color of the pixel at the given position.
@@ -78,8 +86,8 @@ impl<'a> PixBufMutView<'a> {
     /// **UNSAFE** - Given an invalid index, this function will cause undefined behavior.
     #[inline(always)]
     pub unsafe fn get_pixel_by_index(&self, index: usize) -> Color {
-        let ptr = &self.bytes[index] as *const u8 as *const u32;
-        Color(*ptr)
+        let ptr: *const u32 = std::mem::transmute(self.bytes.get_unchecked(index));
+        Color::from_u32(*ptr)
     }
 
     /// Creates a `Graphics` with this buffer.
@@ -132,7 +140,7 @@ impl<'a> PixBufView<'a> {
     /// **UNSAFE** - Given an invalid index, this function will cause undefined behavior.
     #[inline(always)]
     pub unsafe fn get_pixel_by_index(&self, index: usize) -> Color {
-        let ptr = &self.bytes[index] as *const u8 as *const u32;
-        Color(*ptr)
+        let ptr: *const u32 = std::mem::transmute(self.bytes.get_unchecked(index));
+        Color::from_u32(*ptr)
     }
 }

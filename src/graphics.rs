@@ -1,11 +1,127 @@
-use crate::graphics::colors::Color;
 use crate::pixel_buf::{PixBufMutView, PixBufView};
 use crate::shapes::{Line, Poly, Rect, Tri};
+use crate::tri_rasterizer;
 use crate::vectors::Vec2;
 
-pub mod colors;
-pub mod image;
-pub mod tri_rasterizer;
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+#[repr(C)]
+pub struct Color {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
+}
+impl Color {
+    pub const WHITE: Self = Self::rgb(255, 255, 255);
+    pub const BLACK: Self = Self::rgb(0, 0, 0);
+
+    pub const RED: Self = Self::rgb(255, 0, 0);
+    pub const GREEN: Self = Self::rgb(0, 255, 0);
+    pub const BLUE: Self = Self::rgb(0, 0, 255);
+
+    pub const YELLOW: Self = Self::rgb(255, 255, 0);
+    pub const CYAN: Self = Self::rgb(0, 255, 255);
+    pub const MAGENTA: Self = Self::rgb(255, 0, 255);
+
+    #[inline(always)]
+    pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r, g, b, a }
+    }
+    #[inline(always)]
+    pub const fn rgb(r: u8, g: u8, b: u8) -> Self {
+        Self { r, g, b, a: 255 }
+    }
+    #[inline(always)]
+    pub const fn shade_a(shade: u8, a: u8) -> Self {
+        Self {
+            r: shade,
+            g: shade,
+            b: shade,
+            a,
+        }
+    }
+    #[inline(always)]
+    pub const fn shade(shade: u8) -> Self {
+        Self {
+            r: shade,
+            g: shade,
+            b: shade,
+            a: 255,
+        }
+    }
+
+    #[inline(always)]
+    pub const fn to_u32(self) -> u32 {
+        unsafe { std::mem::transmute(self) }
+    }
+    #[inline(always)]
+    pub const fn from_u32(i: u32) -> Self {
+        unsafe { std::mem::transmute(i) }
+    }
+}
+impl From<[u8; 4]> for Color {
+    #[inline(always)]
+    fn from(arr: [u8; 4]) -> Self {
+        unsafe { std::mem::transmute(arr) }
+    }
+}
+
+#[macro_export]
+macro_rules! include_image {
+    ($path:literal) => {{
+        $crate::graphics::Image::load_from_memory(include_bytes!($path))
+    }};
+}
+
+pub struct Image {
+    pub bytes: Vec<u8>,
+    pub size: Vec2<u32>,
+}
+impl Image {
+    /// Constructs a new `Image` with the given size, with all bytes set to 0.
+    pub fn empty(size: Vec2<u32>) -> Self {
+        Self {
+            bytes: vec![0; size.x as usize * size.y as usize * 4],
+            size,
+        }
+    }
+
+    /// Creates a `PixBufMutRef` with a mutable borrow of the buffer for this image.
+    pub fn pixels_mut(&mut self) -> PixBufMutView {
+        PixBufMutView {
+            size: self.size,
+            bytes: &mut self.bytes,
+        }
+    }
+    pub fn pixels(&self) -> PixBufView {
+        PixBufView {
+            size: self.size,
+            bytes: &self.bytes,
+        }
+    }
+
+    /// Creates a `Graphics` with a mutable borrow of the buffer for this image.
+    /// All drawing functions in `Graphics` will directly effect this image.
+    pub fn create_graphics(&mut self) -> Graphics {
+        Graphics {
+            size: self.size,
+            buffer: self.pixels_mut(),
+        }
+    }
+    /// Creates a `Rect` at the position given, and with the same size as this image.
+    pub fn rect_at(&self, pos: Vec2<i32>) -> Rect {
+        Rect::new(pos.x, pos.y, self.size.x as i32, self.size.y as i32)
+    }
+
+    pub fn load_from_memory(bytes: &[u8]) -> Result<Self, image::error::ImageError> {
+        use image::GenericImageView;
+        image::load_from_memory(bytes).map(|image| {
+            let size: Vec2<u32> = image.dimensions().into();
+            let bytes = image.to_rgba8().into_raw();
+            Self { bytes, size }
+        })
+    }
+}
 
 pub struct Graphics<'a> {
     pub buffer: PixBufMutView<'a>,
@@ -37,10 +153,20 @@ impl<'a> Graphics<'a> {
 
     pub fn fill(&mut self, color: Color) {
         let buffer_size = self.buffer.bytes.len();
+        let max_index = buffer_size - 16;
+
+        let color_int = color.to_u32() as u128;
+        let color_x4: u128 = color_int | color_int << 32 | color_int << 64 | color_int << 96;
 
         let mut index = 0;
-        while index < buffer_size {
+        while index < max_index {
             // SAFETY: TODO
+            unsafe {
+                self.buffer.set_4pixels_by_index(index, color_x4);
+            }
+            index += 16;
+        }
+        while index < buffer_size {
             unsafe {
                 self.buffer.set_pixel_by_index(index, color);
             }

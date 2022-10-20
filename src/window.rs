@@ -8,7 +8,6 @@ use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::error::{ExternalError, NotSupportedError};
 use winit::event::{ElementState, Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
-use winit::platform::run_return::EventLoopExtRunReturn;
 use winit::window::{CursorGrabMode, Fullscreen, WindowBuilder};
 
 pub type WinitWindow = winit::window::Window;
@@ -151,7 +150,7 @@ impl CanvasConfig {
     }
 }
 
-pub fn run_canvas_app(mut app: impl CanvasApp + 'static, config: CanvasConfig) {
+pub fn run_canvas_app(mut app: impl CanvasApp + 'static, config: CanvasConfig) -> ! {
     let CanvasConfig {
         title,
         size,
@@ -165,7 +164,7 @@ pub fn run_canvas_app(mut app: impl CanvasApp + 'static, config: CanvasConfig) {
         None
     };
 
-    let mut event_loop = EventLoop::new();
+    let event_loop = EventLoop::new();
 
     let winit = WindowBuilder::new()
         .with_inner_size(PhysicalSize::new(size.x, size.y))
@@ -200,7 +199,7 @@ pub fn run_canvas_app(mut app: impl CanvasApp + 'static, config: CanvasConfig) {
     let mut last_stat_update = Instant::now();
     let mut last_frame = Instant::now();
 
-    event_loop.run_return(move |event, _, flow| {
+    event_loop.run(move |event, _, flow| {
         let instant_now = Instant::now();
 
         // update stats
@@ -284,5 +283,5 @@ pub fn run_canvas_app(mut app: impl CanvasApp + 'static, config: CanvasConfig) {
             }
             started_closing = true;
         }
-    });
+    })
 }
