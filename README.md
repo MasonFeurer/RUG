@@ -3,7 +3,7 @@ RUG is a Rust library for easily prototyping graphics using a canvas like API.
 RUG is not ideal for creating full-fledged apps because:
 - RUG is not super efficient (it's not awfully slow though)
 - RUG is maintained by me (this project will likely not be actively maintained)
-- There are far better libraries (ex: [bevy][https://crates.io/crates/bevy], [eframe][https://crates.io/crates/eframe], [tauri][https://crates.io/crates/tauri])
+- There are far better libraries ([bevy](https://crates.io/crates/bevy), [eframe](https://crates.io/crates/eframe), [tauri](https://crates.io/crates/tauri))
 
 ## Hello, World
 To create an app, you must implement `CanvasApp` for some structure that would store the app's state. Then you can call `run_canvas_app` with an instance of the app and some window configurations.
